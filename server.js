@@ -3,12 +3,19 @@ const PORT = process.env.PORT || 3001;
 const app = express();
 const fs = require('fs');
 const path = require('path');
+// app.use are the middleware to our server
 // those two function below is always needed when we create a server that's accept POST data
 // parse incoming string or array data
 app.use(express.urlencoded({ extended: true}));
 // parse incoming JSON data
 app.use(express.json());
+// request to use css and js from front-end code always needed when we link the server to front-end code
+/* The way it works is that we provide a file path to a location in our application (in this case, the public folder) 
+and instruct the server to make these files static resources. This means that all of our front-end code can now be accessed 
+without having a specific server endpoint created for it!*/ 
+app.use(express.static('public'));
 const { animals } = require('./data/animals');
+
 
 function filterByQuery(query, animalsArray) {
     let personalityTraitsAarry = [];
@@ -110,6 +117,26 @@ app.get('/api/animals/:id', (req, res) => {
         res.send(404);
     }
     
+});
+
+// add route to get the html file
+// '/' brings us to the root route of the server! This is the route used to create a homepage for a server.
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, './public/index.html'));
+});
+
+// add route to get animals.html work
+app.get('/animals', (req, res) => {
+    res.sendFile(path.join(__dirname, './public/animals.html'));
+});
+
+// add route to get zookeeper.html work
+app.get('/zookeepers', (req, res) => {
+    res.sendFile(path.join(__dirname, './public/zookeepers.html'));
+});
+  
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, './public/index.html'));
 });
 
 // create post route,  represent the action of a client requesting the server to accept data
