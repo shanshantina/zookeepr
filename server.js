@@ -1,6 +1,13 @@
 const express = require('express');
 const PORT = process.env.PORT || 3001;
 const app = express();
+const fs = require('fs');
+const path = require('path');
+// those two function below is always needed when we create a server that's accept POST data
+// parse incoming string or array data
+app.use(express.urlencoded({ extended: true}));
+// parse incoming JSON data
+app.use(express.json());
 const { animals } = require('./data/animals');
 
 function filterByQuery(query, animalsArray) {
@@ -45,7 +52,45 @@ function findById(id, animalsArray) {
     return result;
 };
 
-// add the route and send the information to server
+// create animal function
+function createNewAnimal(body, animalsArray) {
+    const animal = body;
+    animalsArray.push(animal);
+    // actual add the input file to origin array
+    /* we're using the fs.writeFileSync() method, which is the synchronous version of fs.writeFile() and doesn't require a callback function. 
+    If we were writing to a much larger data set, the asynchronous version would be better. 
+    But because this isn't a large file, it will work for our needs. We want to write to our animals.json file in the data subdirectory, 
+    so we use the method path.join() to join the value of __dirname, which represents the directory of the file we execute the code in, 
+    with the path to the animals.json file.
+    we need to save the JavaScript array data as JSON, so we use JSON.stringify() to convert it. 
+    The other two arguments used in the method, null and 2, are means of keeping our data formatted. 
+    The null argument means we don't want to edit any of our existing data; if we did, we could pass something in there. 
+    The 2 indicates we want to create white space between our values to make it more readable. If we were to leave those two arguments out, 
+    the entire animals.json file would work, but it would be really hard to read.*/
+    fs.writeFileSync(path.join(__dirname, './data/animals.json'), JSON.stringify({ animals: animalsArray }, null, 2));
+
+    // return finished code to post route for response
+    return animal;
+};
+
+// validate the input animal information
+function validateAnimal(animal) {
+    if (!animal.name || typeof animal.name !== 'string') {
+      return false;
+    }
+    if (!animal.species || typeof animal.species !== 'string') {
+      return false;
+    }
+    if (!animal.diet || typeof animal.diet !== 'string') {
+      return false;
+    }
+    if (!animal.personalityTraits || !Array.isArray(animal.personalityTraits)) {
+      return false;
+    }
+    return true;
+}
+
+// add the GET route and send the information from server to the webpage
 app.get('/api/animals', (req, res) => {
     // request the info from different queries
     let results = animals;
@@ -66,6 +111,23 @@ app.get('/api/animals/:id', (req, res) => {
     }
     
 });
+
+// create post route,  represent the action of a client requesting the server to accept data
+app.post('/api/animals', (req, res) => {
+    // set id based on what the next index of the array will be
+    req.body.id = animals.length.toString();
+    // add animal to json file and animals array in this function
+   // if any data in req.body is incorrect, send 400 error back
+    if (!validateAnimal(req.body)) {
+        // response method to relay a message to the client making the request
+        // we send them an HTTP status code and a message to explain what went wrong.
+       res.status(400).send('The animal is not properly formatted.');
+   } else {
+       const animal = createNewAnimal(req.body, animals);
+       res.json(animal);
+   }  
+});
+
 
 // set the server port
 app.listen(PORT, () => {
